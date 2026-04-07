@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Escuela Dominical - Colores</title>
+    <style>
+        :root {
+            --pepe: #2ecc71;    /* Verde */
+            --abdi: #e67e22;    /* Naranja */
+            --eder: #9b59b6;    /* Morado */
+            --gamaliel: #34495e; /* Gris Oscuro */
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; padding: 20px; color: #333; }
+        h1 { text-align: center; color: #1a3a5a; margin-bottom: 30px; }
+        
+        .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+        
+        .month-section { background: white; border-radius: 12px; padding: 15px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .month-title { border-bottom: 3px solid #ddd; margin-bottom: 15px; color: #555; font-weight: bold; text-transform: uppercase; padding-bottom: 5px; }
+
+        .class-card { 
+            background: #fff; border: 1px solid #e1e4e8; margin: 10px 0; padding: 12px; border-radius: 8px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; }
+        .date-label { font-weight: bold; color: #7f8c8d; font-size: 0.9rem; }
+        .lesson-badge { background: #f1f2f6; color: #2f3542; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+
+        .profesor-slot {
+            min-height: 45px; background: #fafafa; border: 2px dashed #ccc;
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Estilos por profesor */
+        .name-tag {
+            color: white; padding: 10px; border-radius: 5px;
+            cursor: grab; font-size: 1rem; width: 100%; text-align: center;
+            font-weight: 500; transition: transform 0.1s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .name-tag[data-name="Hermano Pepe"] { background-color: var(--pepe); }
+        .name-tag[data-name="Hermano Abdi"] { background-color: var(--abdi); }
+        .name-tag[data-name="Hermano Eder"] { background-color: var(--eder); }
+        .name-tag[data-name="Hermano Gamaliel"] { background-color: var(--gamaliel); }
+        
+        .name-tag:active { cursor: grabbing; transform: scale(0.95); }
+        .drag-over { border-color: #3498db; background: #e3f2fd !important; }
+    </style>
+</head>
+<body>
+
+    <h1>📅 Agenda Dominical</h1>
+    
+    <div class="container" id="agenda-container"></div>
+
+    <script>
+        const profesores = ["Hermano Pepe", "Hermano Abdi", "Hermano Eder", "Hermano Gamaliel"];
+        const mesesNombres = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"];
+        
+        function obtenerDomingos() {
+            let domingos = [];
+            let fecha = new Date(2026, 3, 12); // Próximo domingo 12 Abril 2026
+
+            while (fecha.getMonth() <= 5) {
+                domingos.push(new Date(fecha));
+                fecha.setDate(fecha.getDate() + 7);
+            }
+            return domingos;
+        }
+
+        function renderizarAgenda() {
+            const container = document.getElementById('agenda-container');
+            const domingos = obtenerDomingos();
+            let currentMonth = -1;
+            let monthDiv;
+            let leccionNumero = 13;
+
+            domingos.forEach((dom, index) => {
+                if (dom.getMonth() !== currentMonth) {
+                    currentMonth = dom.getMonth();
+                    monthDiv = document.createElement('div');
+                    monthDiv.className = 'month-section';
+                    monthDiv.innerHTML = `<div class="month-title">${mesesNombres[currentMonth]}</div>`;
+                    container.appendChild(monthDiv);
+                }
+
+                const profAsignado = profesores[index % profesores.length];
+                const card = document.createElement('div');
+                card.className = 'class-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="date-label">${dom.getDate()} ${mesesNombres[dom.getMonth()]}</span>
+                        <span class="lesson-badge">Lección ${leccionNumero}</span>
+                    </div>
+                    <div class="profesor-slot" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                        <div class="name-tag" draggable="true" ondragstart="drag(event)" 
+                             id="prof-${index}" data-name="${profAsignado}">
+                            ${profAsignado}
+                        </div>
+                    </div>
+                `;
+                monthDiv.appendChild(card);
+                leccionNumero++;
+            });
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('drag-over');
+        }
+
+        function dragLeave(ev) {
+            ev.currentTarget.classList.remove('drag-over');
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+            let data = ev.dataTransfer.setData ? ev.dataTransfer.getData("text") : null;
+            if(!data) return;
+
+            let draggedElement = document.getElementById(data);
+            let targetSlot = ev.currentTarget;
+
+            if (targetSlot.children.length > 0) {
+                let existingElement = targetSlot.children[0];
+                let originalParent = draggedElement.parentElement;
+                targetSlot.appendChild(draggedElement);
+                originalParent.appendChild(existingElement);
+            } else {
+                targetSlot.appendChild(draggedElement);
+            }
+        }
+
+        window.onload = renderizarAgenda;
+    </script>
+</body>
+</html>
