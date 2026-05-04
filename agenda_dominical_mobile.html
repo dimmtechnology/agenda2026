@@ -1,0 +1,215 @@
+
+<style>
+  :root { --pepe:#2ecc71; --abdi:#e67e22; --eder:#9b59b6; --gamaliel:#34495e; }
+  * { box-sizing: border-box; }
+  #root { font-family: var(--font-sans); padding: 0.75rem 0; }
+  .mes-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0.5rem 0 0.5rem; margin: 1rem 0 0.5rem;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+  }
+  .mes-header span {
+    font-size: 13px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--color-text-secondary);
+  }
+  .card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 12px; margin-bottom: 10px;
+    transition: opacity 0.2s;
+  }
+  .card.suspendida { opacity: 0.55; }
+  .card-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .date-label { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+  .leccion-badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 20px;
+    background: var(--color-background-secondary);
+    color: var(--color-text-secondary);
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+  .prof-pill {
+    display: flex; align-items: center; justify-content: space-between;
+    border-radius: var(--border-radius-md);
+    padding: 11px 14px; margin-bottom: 8px;
+    font-size: 14px; font-weight: 500; color: white;
+    min-height: 44px;
+  }
+  .prof-pill[data-name="Hermano Pepe"] { background: var(--pepe); }
+  .prof-pill[data-name="Hermano Abdi"] { background: var(--abdi); }
+  .prof-pill[data-name="Hermano Eder"] { background: var(--eder); }
+  .prof-pill[data-name="Hermano Gamaliel"] { background: var(--gamaliel); }
+  .empty-slot {
+    background: var(--color-background-secondary);
+    border: 1.5px dashed var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    height: 44px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--color-text-tertiary);
+  }
+  .suspended-banner {
+    background: #e74c3c; color: white;
+    border-radius: var(--border-radius-md);
+    text-align: center; font-size: 12px; font-weight: 500;
+    padding: 10px; margin-bottom: 6px; letter-spacing: 0.04em;
+  }
+  .reason-input {
+    width: 100%; padding: 8px 10px; font-size: 13px;
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-secondary);
+    background: var(--color-background-secondary);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    margin-bottom: 8px;
+  }
+  .reason-input::placeholder { color: var(--color-text-tertiary); }
+  .card-actions { display: flex; justify-content: flex-end; }
+  .btn-suspend {
+    font-size: 12px; padding: 6px 14px; min-height: 36px;
+    border-radius: 20px; border: 1px solid #e74c3c;
+    background: transparent; color: #e74c3c; cursor: pointer;
+    font-family: var(--font-sans); font-weight: 500;
+    transition: background 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-suspend.active { background: #e74c3c; color: white; }
+  .swap-btn {
+    background: rgba(255,255,255,0.25); border: none;
+    color: white; font-size: 12px; padding: 4px 8px;
+    border-radius: var(--border-radius-md); cursor: pointer;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .swap-panel {
+    background: var(--color-background-secondary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    padding: 10px; margin-bottom: 8px;
+  }
+  .swap-panel p { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 8px; }
+  .swap-options { display: flex; flex-direction: column; gap: 6px; }
+  .swap-option {
+    padding: 9px 12px; border-radius: var(--border-radius-md);
+    font-size: 13px; font-weight: 500; color: white;
+    cursor: pointer; border: none; text-align: left;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .swap-option[data-name="Hermano Pepe"] { background: var(--pepe); }
+  .swap-option[data-name="Hermano Abdi"] { background: var(--abdi); }
+  .swap-option[data-name="Hermano Eder"] { background: var(--eder); }
+  .swap-option[data-name="Hermano Gamaliel"] { background: var(--gamaliel); }
+</style>
+
+<div id="root"></div>
+
+<script>
+const profesores = ["Hermano Pepe","Hermano Abdi","Hermano Eder","Hermano Gamaliel"];
+const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+function getDomingos() {
+  let list = [], f = new Date(2026, 3, 12);
+  while (f.getMonth() <= 5) { list.push(new Date(f)); f.setDate(f.getDate() + 7); }
+  return list;
+}
+
+const domingos = getDomingos();
+const state = domingos.map(d => ({ date: d, suspended: false, reason: '', manualProf: null, swapping: false }));
+
+function calcProfs() {
+  let turno = 0;
+  return state.map(s => {
+    if (s.suspended) return null;
+    const p = s.manualProf !== null ? s.manualProf : profesores[turno % profesores.length];
+    turno++;
+    return p;
+  });
+}
+
+function render() {
+  const root = document.getElementById('root');
+  const asig = calcProfs();
+  let html = '';
+  let mesActual = -1;
+  let leccion = 13;
+
+  state.forEach((s, i) => {
+    if (s.date.getMonth() !== mesActual) {
+      mesActual = s.date.getMonth();
+      html += `<div class="mes-header"><span>${meses[mesActual]}</span></div>`;
+    }
+
+    let slotHtml = '';
+    if (s.suspended) {
+      slotHtml = `
+        <div class="suspended-banner">CLASE SUSPENDIDA</div>
+        <input class="reason-input" type="text" placeholder="Motivo (opcional)"
+          value="${s.reason}" oninput="state[${i}].reason=this.value" />
+      `;
+    } else if (s.swapping) {
+      const otrasOpciones = state
+        .map((ss, j) => ({ j, p: asig[j] }))
+        .filter(x => !state[x.j].suspended && x.j !== i && x.p);
+      const opts = otrasOpciones.map(x =>
+        `<button class="swap-option" data-name="${x.p}" onclick="doSwap(${i},${x.j})">${x.p} <small style="opacity:.7;font-weight:400;font-size:11px">— ${state[x.j].date.getDate()} ${meses[state[x.j].date.getMonth()]}</small></button>`
+      ).join('');
+      slotHtml = `
+        <div class="prof-pill" data-name="${asig[i]}">
+          ${asig[i]}
+          <button class="swap-btn" onclick="cancelSwap(${i})">✕ cancelar</button>
+        </div>
+        <div class="swap-panel">
+          <p>Intercambiar con:</p>
+          <div class="swap-options">${opts}</div>
+        </div>
+      `;
+    } else {
+      slotHtml = `
+        <div class="prof-pill" data-name="${asig[i]}">
+          ${asig[i]}
+          <button class="swap-btn" onclick="startSwap(${i})">intercambiar</button>
+        </div>
+      `;
+    }
+
+    html += `
+      <div class="card${s.suspended ? ' suspendida' : ''}">
+        <div class="card-top">
+          <span class="date-label">${s.date.getDate()} ${meses[s.date.getMonth()]}</span>
+          <span class="leccion-badge">Lección ${leccion}</span>
+        </div>
+        ${slotHtml}
+        <div class="card-actions">
+          <button class="btn-suspend${s.suspended ? ' active' : ''}" onclick="toggleSuspend(${i})">
+            ${s.suspended ? 'Reactivar' : 'Suspender'}
+          </button>
+        </div>
+      </div>
+    `;
+    leccion++;
+  });
+
+  root.innerHTML = html;
+}
+
+function toggleSuspend(i) {
+  state[i].suspended = !state[i].suspended;
+  if (!state[i].suspended) state[i].manualProf = null;
+  state[i].swapping = false;
+  render();
+}
+function startSwap(i) { state.forEach((s,j) => s.swapping = j === i); render(); }
+function cancelSwap(i) { state[i].swapping = false; render(); }
+function doSwap(i, j) {
+  const asig = calcProfs();
+  state[i].manualProf = asig[j];
+  state[j].manualProf = asig[i];
+  state[i].swapping = false;
+  render();
+}
+
+render();
+</script>
